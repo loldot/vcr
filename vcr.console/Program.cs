@@ -33,13 +33,22 @@ verifyCommand.AddOption(fileOption);
 verifyCommand.SetHandler(Verify, fileOption);
 rootCommand.AddCommand(verifyCommand);
 
+
+var addressOption = new Option<string?>(
+    name: "--address", 
+    description: "address to listen on: i.e. http://localhost:9000/ (default) http://*:8000/");
+addressOption.SetDefaultValue("http://localhost:9000");
+
 var serveCommand = new Command("serve", "Create a mock http server that will accept requests matching method/relative path from requests in the .har file and replicate the responses.");
 serveCommand.AddOption(fileOption);
+serveCommand.AddOption(addressOption);
+
 serveCommand.SetHandler(async (context) =>
         {
-            FileInfo fileOptionValue = context.ParseResult.GetValueForOption(fileOption);
+            FileInfo fileOptionValue = context.ParseResult.GetValueForOption(fileOption)!;
+            string addressOptionValue = context.ParseResult.GetValueForOption(addressOption)!;
             var token = context.GetCancellationToken();
-            await Serve(fileOptionValue, token);
+            await Serve(fileOptionValue, addressOptionValue, token);
         });
 rootCommand.AddCommand(serveCommand);
 
@@ -121,10 +130,8 @@ async Task Verify(FileInfo file)
     }
 }
 
-async Task Serve(FileInfo file, CancellationToken ct)
+async Task Serve(FileInfo file, string address, CancellationToken ct)
 {
-    const string prefix = "http://*:8080/";
-
     MockServer server;
     using (var fs = File.OpenRead(file.FullName))
     {
@@ -134,9 +141,11 @@ async Task Serve(FileInfo file, CancellationToken ct)
 
     using var listener = new HttpListener();
 
-    listener.Prefixes.Add(prefix);
+
+    address = address.EndsWith('/') ? address : address + '/';
+    listener.Prefixes.Add(address);
     listener.Start();
-    LogInformation($"Started listening on {prefix}");
+    LogInformation($"Started listening on {address}");
     while (!ct.IsCancellationRequested)
     {
         var context = await listener.GetContextAsync();
