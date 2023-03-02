@@ -2,19 +2,26 @@
 
 public class HttpArchive
 {
-    public Log Log { get; set; }
+    public Log Log { get; set; } = new();
 }
 
 public class Log
 {
     public string Version { get; set; } = "1.2";
-    public Creator Creator { get; set; }
-    public Page[] Pages { get; set; }
-    public Entry[] Entries { get; set; }
+    public Creator Creator { get; set; } = new();
+    public List<Page> Pages { get; set; } = new();
+    public List<Entry> Entries { get; set; } = new();
 }
 
 public class Creator
 {
+    public Creator() : this("Unknown Creator", "0.0.0") { }
+    public Creator(string name, string version)
+    {
+        Name = name;
+        Version = version;
+    }
+
     public string Name { get; set; }
     public string Version { get; set; }
 }
@@ -23,8 +30,8 @@ public class Entry
 {
     public DateTimeOffset StartedDateTime { get; set; }
     public long Time { get; set; }
-    public Request Request { get; set; }
-    public Response Response { get; set; }
+    public Request Request { get; set; } = new();
+    public Response Response { get; set; } = new();
     public Cache Cache { get; set; }
     public Timings Timings { get; set; }
     public string Pageref { get; set; }
@@ -63,18 +70,18 @@ public class Request
     public string Method { get; set; }
     public Uri Url { get; set; }
     public string HttpVersion { get; set; }
-    public Header[] Headers { get; set; }
-    public Header[] QueryString { get; set; }
-    public Cookie[] Cookies { get; set; }
+    public List<Header> Headers { get; set; }
+    public List<Header> QueryString { get; set; }
+    public List<Cookie> Cookies { get; set; }
     public long HeadersSize { get; set; }
     public long BodySize { get; set; }
     public PostData? PostData { get; set; }
 }
 
-public class PostData 
+public class PostData
 {
     public string MimeType { get; set; }
-    public PostParam[]? Params { get; set; }
+    public List<PostParam>? Params { get; set; }
     public string Text { get; set; }
     public string? Comment { get; set; }
 }
@@ -88,6 +95,16 @@ public class PostParam
 
 public class Header
 {
+    public Header()
+    {
+    }
+
+    public Header(string name, string value)
+    {
+        Name = name;
+        Value = value;
+    }
+
     public string Name { get; set; }
     public string Value { get; set; }
 }
@@ -97,8 +114,8 @@ public class Response
     public int Status { get; set; }
     public string StatusText { get; set; }
     public string HttpVersion { get; set; }
-    public Header[] Headers { get; set; }
-    public Cookie[] Cookies { get; set; }
+    public List<Header> Headers { get; set; }
+    public List<Cookie> Cookies { get; set; }
     public Content Content { get; set; }
     public string RedirectUrl { get; set; }
     public long HeadersSize { get; set; }
@@ -108,7 +125,7 @@ public class Response
 public class Content
 {
     public long Size { get; set; }
-    public string MimeType { get; set; }
+    public string? MimeType { get; set; }
     public string Text { get; set; }
     public long? Compression { get; set; }
     public string? Encoding { get; set; }

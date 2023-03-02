@@ -4,6 +4,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using Vcr.Console;
+using Vcr.Core;
 using Vcr.Core.HAR.Version1_2;
 
 var handler = new HttpClientHandler
@@ -33,6 +34,12 @@ verifyCommand.AddOption(fileOption);
 verifyCommand.SetHandler(Verify, fileOption);
 rootCommand.AddCommand(verifyCommand);
 
+var url = new Option<Uri>("--url");
+var recordCommand = new Command("record", "record a request to an http server");
+recordCommand.AddOption(fileOption);
+recordCommand.AddOption(url);
+recordCommand.SetHandler(Record, url, fileOption);
+rootCommand.AddCommand(recordCommand);
 
 var addressOption = new Option<string?>(
     name: "--address", 
@@ -167,6 +174,20 @@ async Task Serve(FileInfo file, string address, CancellationToken ct)
     }
     listener.Stop();
     LogInformation("Server stopped");
+}
+
+async Task Record(Uri url, FileInfo file)
+{
+    var harBuilder = new HarBuilder();
+    var httpclient = new HttpClient(handler);
+    var request = new HttpRequestMessage(HttpMethod.Get, url);
+    var entry = harBuilder.WithEntry();
+
+    entry.WithRequest(request);
+    var response = await httpclient.SendAsync(request);
+    entry.WithResponse(response);
+
+    await harBuilder.SaveToFile(file.FullName);
 }
 
 async Task<bool> CompareResponse(HttpResponseMessage actualResponse, Response expectedResponse)
