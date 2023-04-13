@@ -1,4 +1,5 @@
-﻿using Vcr.Core.HAR.Version1_2;
+﻿using System.Net;
+using Vcr.Core.HAR.Version1_2;
 
 namespace Vcr.Core;
 
@@ -7,6 +8,7 @@ public sealed class VcrTestInterceptor : DelegatingHandler
 {
     private readonly string recordingPath;
     public HttpArchive? Archive { get; private set; }
+
     private HarBuilder recorder = new HarBuilder();
     private MockServer server = new MockServer();
     private bool isAttached = false;
@@ -49,4 +51,21 @@ public sealed class VcrTestInterceptor : DelegatingHandler
         recorder.SaveToFileSync(recordingPath);
         base.Dispose(disposing);
     }
+}
+
+public class VcrTestInterceptorFactory : IHttpClientFactory, IHttpMessageHandlerFactory
+{
+    private readonly VcrTestInterceptor interceptor;
+
+    public VcrTestInterceptorFactory(VcrTestInterceptor interceptor)
+    {
+        this.interceptor = interceptor;
+    }
+
+    public HttpClient CreateClient(string name)
+    {
+        return new HttpClient(interceptor);
+    }
+
+    public HttpMessageHandler CreateHandler(string name) => interceptor;
 }
