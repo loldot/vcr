@@ -42,10 +42,20 @@ public class HarBuilder
         var options = new JsonSerializerOptions();
         options.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
 
-        using var fs = File.OpenWrite(path);
+        using var fs = File.Open(path, FileMode.Create);
         await JsonSerializer.SerializeAsync(fs, this.archive, options);
     }
 
+    public void SaveToFileSync(string path)
+    {
+        if (!Path.GetExtension(path).Equals(".har")) path = path + ".har";
+
+        var options = new JsonSerializerOptions();
+        options.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+
+        using var fs = File.Open(path, FileMode.Create);
+        JsonSerializer.Serialize(fs, this.archive, options);
+    }
 
     public class HarEntryBuilder
     {

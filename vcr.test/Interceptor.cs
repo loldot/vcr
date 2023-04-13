@@ -42,12 +42,12 @@ public class Interceptor
         File.Exists(harPath).Should().BeTrue();
 
         var har = await HttpArchive.Load(harPath);
-        
+
         har.Should().NotBeNull();
         har!.Log.Entries.Should().HaveCount(1);
 
         var json = har!.Log.Entries[0].Response.Content.Text;
-        var dict = JsonSerializer.Deserialize<Dictionary<string,string>>(json);
+        var dict = JsonSerializer.Deserialize<Dictionary<string, string>>(json);
 
         dict.Should().NotBeNull();
         dict!["ip"].Should().NotBeNull();
@@ -62,7 +62,33 @@ public class Interceptor
         var interceptor = new VcrTestInterceptor(harPath);
 
         var http = new HttpClient(interceptor);
-        var dict = await http.GetFromJsonAsync<Dictionary<string,string>>("https://api.ipify.org?format=json");
+        var dict = await http.GetFromJsonAsync<Dictionary<string, string>>("https://api.ipify.org?format=json");
         dict!["ip"].Should().Be("123.123.123.123");
+    }
+
+    [Fact]
+    public async Task ShouldUpdateArchive()
+    {
+        var originalHarPath = "./ip.har";
+        var harPath = $"{Path.GetTempFileName()}.har";
+        File.Copy(originalHarPath, harPath, overwrite: true);
+
+        var interceptor = new VcrTestInterceptor(harPath);
+
+        var http = new HttpClient(interceptor);
+        var newUrl = new Uri("https://api.ipify.org");
+        var response = await http.GetAsync(newUrl);
+        var ip = await response.Content.ReadAsStringAsync();
+
+        http.Dispose();
+
+        var archive = await HttpArchive.Load(harPath);
+
+        archive!.Log.Entries.Should().HaveCount(2);
+
+        var newEntry = archive.Log.Entries.First(x => x.Request.Url == newUrl);
+        newEntry.Response.Content.Text.Should().Be(ip);
+
+        File.Delete(harPath);
     }
 }

@@ -3,12 +3,12 @@
 namespace Vcr.Core;
 
 
-public sealed class VcrTestInterceptor : DelegatingHandler, IAsyncDisposable
+public sealed class VcrTestInterceptor : DelegatingHandler
 {
     private readonly string recordingPath;
-    private HttpArchive? archive;
-    private HarBuilder recorder;
-    private MockServer server;
+    public HttpArchive? Archive { get; private set; }
+    private HarBuilder recorder = new HarBuilder();
+    private MockServer server = new MockServer();
     private bool isAttached = false;
 
     public VcrTestInterceptor(string recordingPath)
@@ -21,9 +21,9 @@ public sealed class VcrTestInterceptor : DelegatingHandler, IAsyncDisposable
     {
         if (isAttached) return;
 
-        archive = await HttpArchive.Load(recordingPath);
-        recorder = new HarBuilder(archive);
-        server = new MockServer(archive);
+        Archive = await HttpArchive.Load(recordingPath);
+        recorder = new HarBuilder(Archive);
+        server = new MockServer(Archive, MockServer.RoutingModes.Absolute);
         isAttached = true;
     }
 
@@ -31,7 +31,7 @@ public sealed class VcrTestInterceptor : DelegatingHandler, IAsyncDisposable
     {
         await Attach();
 
-        var storedResponse = server.GetResponse(request.Method, request.RequestUri!.PathAndQuery);
+        var storedResponse = server.GetResponse(request.Method, request.RequestUri!.AbsoluteUri);
 
         if (storedResponse != null) return storedResponse.ToHttpResponseMessage();
 
@@ -46,12 +46,7 @@ public sealed class VcrTestInterceptor : DelegatingHandler, IAsyncDisposable
 
     protected override void Dispose(bool disposing)
     {
-        DisposeAsync().ConfigureAwait(false);
+        recorder.SaveToFileSync(recordingPath);
         base.Dispose(disposing);
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        await recorder.SaveToFile(recordingPath);
     }
 }
