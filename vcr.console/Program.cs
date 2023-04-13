@@ -1,9 +1,7 @@
 ﻿using System.CommandLine;
 using System.Net;
-using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
-using Vcr.Console;
 using Vcr.Core;
 using Vcr.Core.HAR.Version1_2;
 
@@ -61,40 +59,16 @@ rootCommand.AddCommand(serveCommand);
 
 return await rootCommand.InvokeAsync(args);
 
-HttpRequestMessage RecreateRequest(Request request)
-{
-    var httpRequestMessage = new HttpRequestMessage(
-        new HttpMethod(request.Method),
-        request.Url
-    );
-
-    foreach (var header in request.Headers)
-    {
-        if (header.Name.StartsWith("content-", StringComparison.InvariantCultureIgnoreCase)) continue;
-
-        httpRequestMessage.Headers.Add(header.Name, header.Value);
-    }
-
-    if (request.PostData is not null)
-    {
-        httpRequestMessage.Content = new StringContent(request.PostData.Text);
-        httpRequestMessage.Content.Headers.ContentType = MediaTypeHeaderValue.Parse(request.PostData.MimeType); ;
-    }
-
-    return httpRequestMessage;
-}
-
 async Task Replay(FileInfo file)
 {
     Console.WriteLine($"Replaying {file.FullName}");
 
-    using var fs = File.OpenRead(file.FullName);
     using var http = new HttpClient(handler);
 
-    var har = await JsonSerializer.DeserializeAsync<HttpArchive>(fs, options);
+    var har = await HttpArchive.Load(file);
     foreach (var entry in har!.Log.Entries)
     {
-        var request = RecreateRequest(entry.Request);
+        var request = entry.Request.RecreateRequest();
         var response = await http.SendAsync(request);
 
         LogInformation($"{entry.Request.Method.ToUpper()} {entry.Request.Url}");
@@ -116,7 +90,7 @@ async Task Verify(FileInfo file)
 
     foreach (var entry in har!.Log.Entries)
     {
-        var request = RecreateRequest(entry.Request);
+        var request = entry.Request.RecreateRequest();
         var response = await http.SendAsync(request);
 
 
@@ -139,15 +113,10 @@ async Task Verify(FileInfo file)
 
 async Task Serve(FileInfo file, string address, CancellationToken ct)
 {
-    MockServer server;
-    using (var fs = File.OpenRead(file.FullName))
-    {
-        var har = await JsonSerializer.DeserializeAsync<HttpArchive>(fs, options);
-        server = MockServer.Create(har);
-    }
+    var archive = await HttpArchive.Load(file);
+    var server = new MockServer(archive);
 
     using var listener = new HttpListener();
-
 
     address = address.EndsWith('/') ? address : address + '/';
     listener.Prefixes.Add(address);

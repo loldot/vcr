@@ -1,8 +1,27 @@
-﻿namespace Vcr.Core.HAR.Version1_2;
+﻿using System.Net.Http.Headers;
+using System.Text.Json;
+
+namespace Vcr.Core.HAR.Version1_2;
 
 public class HttpArchive
 {
     public Log Log { get; set; } = new();
+
+    public static Task<HttpArchive?> Load(string path) => Load(new FileInfo(path));
+
+    public static async Task<HttpArchive?> Load(FileInfo file)
+    {
+        if (!file.Exists) return null;
+
+        var options = new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true
+        };
+
+        using var fs = File.OpenRead(file.FullName);
+
+        return await JsonSerializer.DeserializeAsync<HttpArchive>(fs, options);
+    }
 }
 
 public class Log
@@ -76,6 +95,29 @@ public class Request
     public long HeadersSize { get; set; }
     public long BodySize { get; set; }
     public PostData? PostData { get; set; }
+
+    public HttpRequestMessage RecreateRequest()
+    {
+        var httpRequestMessage = new HttpRequestMessage(
+            new HttpMethod(this.Method),
+            this.Url
+        );
+
+        foreach (var header in this.Headers)
+        {
+            if (header.Name.StartsWith("content-", StringComparison.InvariantCultureIgnoreCase)) continue;
+
+            httpRequestMessage.Headers.Add(header.Name, header.Value);
+        }
+
+        if (this.PostData is not null)
+        {
+            httpRequestMessage.Content = new StringContent(this.PostData.Text);
+            httpRequestMessage.Content.Headers.ContentType = MediaTypeHeaderValue.Parse(this.PostData.MimeType); ;
+        }
+
+        return httpRequestMessage;
+    }
 }
 
 public class PostData

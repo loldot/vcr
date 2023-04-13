@@ -18,6 +18,15 @@ public class HarBuilder
         archive.Log.Creator = new Creator(AssemblyName, AssemblyVersion);
     }
 
+    public HarBuilder(HttpArchive? existingArchive)
+    {
+        if (existingArchive is not null)
+        {
+            this.archive = existingArchive;
+        }
+        this.archive.Log.Creator = new Creator(AssemblyName, AssemblyVersion);
+    }
+
     public HarEntryBuilder WithEntry()
     {
         var builder = new HarEntryBuilder();
