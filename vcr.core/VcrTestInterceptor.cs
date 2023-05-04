@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using Microsoft.Extensions.Http;
+using System.Net;
 using Vcr.Core.HAR.Version1_2;
 
 namespace Vcr.Core;
@@ -11,31 +12,34 @@ public sealed class VcrTestInterceptor : DelegatingHandler
 
     private HarBuilder recorder = new HarBuilder();
     private MockServer server = new MockServer();
-    private bool isAttached = false;
+    private bool isIntercepting = false;
 
     public VcrTestInterceptor(string recordingPath)
-        : base(new HttpClientHandler())
+        : this(recordingPath, new HttpClientHandler()) { }
+
+    public VcrTestInterceptor(string recordingPath, HttpMessageHandler innerHandler)
+        : base(innerHandler)
     {
         this.recordingPath = recordingPath;
     }
 
-    private async Task Attach()
+    private async Task Intercept()
     {
-        if (isAttached) return;
+        if (isIntercepting) return;
 
         Archive = await HttpArchive.Load(recordingPath);
         recorder = new HarBuilder(Archive);
         server = new MockServer(Archive, MockServer.RoutingModes.Absolute);
-        isAttached = true;
+        isIntercepting = true;
     }
 
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
-        await Attach();
+        await Intercept();
 
         var storedResponse = server.GetResponse(request.Method, request.RequestUri!.AbsoluteUri);
 
-        if (storedResponse != null) return storedResponse.ToHttpResponseMessage();
+        if (storedResponse is not null) return storedResponse.ToHttpResponseMessage();
 
         var entry = recorder.WithEntry();
         entry.WithRequest(request);
@@ -62,10 +66,6 @@ public class VcrTestInterceptorFactory : IHttpClientFactory, IHttpMessageHandler
         this.interceptor = interceptor;
     }
 
-    public HttpClient CreateClient(string name)
-    {
-        return new HttpClient(interceptor);
-    }
-
+    public HttpClient CreateClient(string name) => new(interceptor);
     public HttpMessageHandler CreateHandler(string name) => interceptor;
 }

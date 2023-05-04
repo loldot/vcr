@@ -4,11 +4,11 @@ namespace Vcr.Test.Example;
 
 class ExampleService
 {
-    private HttpClient http;
+    private readonly HttpClient http;
 
     public ExampleService(IHttpClientFactory httpClientFactory)
     {
-        this.http = httpClientFactory.CreateClient();
+        http = httpClientFactory.CreateClient();
     }
 
     public async Task<string> GetIp()
