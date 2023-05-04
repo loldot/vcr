@@ -1,8 +1,6 @@
-using System.IO.Compression;
 using System.Net.Http.Headers;
 using System.Reflection;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using System.Web;
 using Vcr.Core.HAR.Version1_2;
 
@@ -10,8 +8,8 @@ namespace Vcr.Core;
 
 public class HarBuilder
 {
-    private static string AssemblyName = Assembly.GetExecutingAssembly().FullName;
-    private static string AssemblyVersion = Assembly.GetExecutingAssembly().GetName().Version.ToString();
+    private static string AssemblyName = Assembly.GetExecutingAssembly().FullName ?? "Vcr.Console" ;
+    private static string AssemblyVersion = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "x.x.x.x";
     private readonly HttpArchive archive = new HttpArchive();
     public HarBuilder()
     {
@@ -71,18 +69,20 @@ public class HarBuilder
                 Entry.Request.BodySize = request.Content.Headers.ContentLength ?? 0;
                 Entry.Request.PostData = new PostData
                 {
-                    MimeType = request.Content.Headers.ContentType.ToString(),
+                    MimeType = request.Content.Headers.ContentType?.ToString() ?? "",
                     Text = request.Content.ReadAsStringAsync().Result,
                 };
             }
 
-            if (!string.IsNullOrEmpty(request.RequestUri.Query))
+            if (!string.IsNullOrEmpty(request.RequestUri?.Query))
             {
                 Entry.Request.QueryString = new List<Header>();
                 var queryParams = HttpUtility.ParseQueryString(request.RequestUri.Query);
+                if(queryParams is null) return this;
+
                 foreach (var key in queryParams.AllKeys!)
                 {
-                    Entry.Request.QueryString.Add(new Header(key!, queryParams[key!]));
+                    Entry.Request.QueryString.Add(new Header(key!, queryParams[key!]!));
                 }
             }
 
