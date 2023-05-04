@@ -40,7 +40,7 @@ recordCommand.SetHandler(Record, url, fileOption);
 rootCommand.AddCommand(recordCommand);
 
 var addressOption = new Option<string?>(
-    name: "--address", 
+    name: "--address",
     description: "address to listen on: i.e. http://localhost:9000/ (default) http://*:8000/");
 addressOption.SetDefaultValue("http://localhost:9000");
 
@@ -117,6 +117,7 @@ async Task Serve(FileInfo file, string address, CancellationToken ct)
     var server = new MockServer(archive);
 
     using var listener = new HttpListener();
+    Console.CancelKeyPress += (o, e) => { listener.Stop(); Environment.Exit(0); };
 
     address = address.EndsWith('/') ? address : address + '/';
     listener.Prefixes.Add(address);
@@ -127,14 +128,16 @@ async Task Serve(FileInfo file, string address, CancellationToken ct)
         var context = await listener.GetContextAsync();
         LogInformation($"{context.Request.HttpMethod}: {context.Request.Url}");
 
-        var response = server.GetResponse(HttpMethod.Get, context.Request.Url!.PathAndQuery);
+        var response = server.GetResponse(new HttpMethod(context.Request.HttpMethod), context.Request.Url!.PathAndQuery);
         if (response is null)
         {
+            LogWarning("No result found in .har file");
             context.Response.StatusCode = 404;
         }
         else
         {
             byte[] data = response.Content.GetBytes();
+            context.Response.StatusCode = response.Status;
             context.Response.ContentEncoding = Encoding.UTF8;
             await context.Response.OutputStream.WriteAsync(data, 0, data.Length);
         }

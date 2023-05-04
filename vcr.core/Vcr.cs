@@ -2,11 +2,11 @@ using System.Runtime.CompilerServices;
 
 namespace Vcr.Core;
 
-public class Recorder : IDisposable
+public class HttpRecorder : IDisposable
 {
     private readonly VcrTestInterceptor interceptor;
 
-    public Recorder([CallerMemberName] string name = "")
+    public HttpRecorder([CallerMemberName] string name = "")
     {
         if (!name.EndsWith(".har")) name = $"{name}.har";
 
