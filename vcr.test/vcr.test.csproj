@@ -21,6 +21,7 @@
 
   <ItemGroup>
     <None Update="ip.har" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="ip-with-mutated-response.har" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
   
 

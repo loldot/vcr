@@ -15,7 +15,7 @@ var options = new JsonSerializerOptions
     PropertyNameCaseInsensitive = true
 };
 
-var fileOption = new Option<FileInfo?>(
+var fileOption = new Option<FileInfo>(
     name: "--file",
     description: "The http archive file (.har)");
 fileOption.IsRequired = true;

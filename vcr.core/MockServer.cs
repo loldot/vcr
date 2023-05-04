@@ -4,7 +4,7 @@ namespace Vcr.Core;
 
 public class MockServer
 {
-    private Dictionary<Route, Response> routeData = new();
+    private Dictionary<Route, ResponseGenerator> routeData = new();
 
     public RoutingModes RoutingMode { get; }
 
@@ -34,7 +34,13 @@ public class MockServer
                 };
 
                 var route = new Route(new HttpMethod(entry.Request.Method), path);
-                routeData.Add(route, entry.Response);
+                
+                if(!routeData.ContainsKey(route))
+                {
+                    routeData[route] = new ResponseGenerator();
+                }
+
+                routeData[route].Add(entry.Response);
             }
         }
     }
@@ -43,7 +49,7 @@ public class MockServer
     private Response? GetResponse(Route route)
     {
         routeData.TryGetValue(route, out var response);
-        return response;
+        return response?.GetResponse();
     }
 
     record Route(HttpMethod Method, string url);

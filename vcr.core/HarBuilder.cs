@@ -8,7 +8,7 @@ namespace Vcr.Core;
 
 public class HarBuilder
 {
-    private static string AssemblyName = Assembly.GetExecutingAssembly().FullName ?? "Vcr.Console" ;
+    private static string AssemblyName = Assembly.GetExecutingAssembly().FullName ?? "Vcr.Console";
     private static string AssemblyVersion = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "x.x.x.x";
     private readonly HttpArchive archive = new HttpArchive();
     public HarBuilder()
@@ -61,6 +61,7 @@ public class HarBuilder
 
         public HarEntryBuilder WithRequest(HttpRequestMessage request)
         {
+            Entry.StartedDateTime = DateTimeOffset.Now;
             Entry.Request.Method = request.Method.ToString();
             Entry.Request.Url = request.RequestUri!;
 
@@ -78,7 +79,7 @@ public class HarBuilder
             {
                 Entry.Request.QueryString = new List<Header>();
                 var queryParams = HttpUtility.ParseQueryString(request.RequestUri.Query);
-                if(queryParams is null) return this;
+                if (queryParams is null) return this;
 
                 foreach (var key in queryParams.AllKeys!)
                 {

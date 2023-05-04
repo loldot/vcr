@@ -66,6 +66,23 @@ public class Interceptor
         dict!["ip"].Should().Be("123.123.123.123");
     }
 
+
+    [Fact]
+    public async Task ShouldSequenceRecordedResponses()
+    {
+        var harPath = "./ip-with-mutated-response.har";
+        var interceptor = new VcrTestInterceptor(harPath);
+
+        var http = new HttpClient(interceptor);
+
+        var dict = await http.GetFromJsonAsync<Dictionary<string, string>>("https://api.ipify.org?format=json");
+        dict!["ip"].Should().Be("123.123.123.123");
+
+        dict = await http.GetFromJsonAsync<Dictionary<string, string>>("https://api.ipify.org?format=json");
+        dict!["ip"].Should().Be("127.0.0.1");
+    }
+
+
     [Fact]
     public async Task ShouldUpdateArchive()
     {
